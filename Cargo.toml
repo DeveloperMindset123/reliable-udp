@@ -10,5 +10,9 @@ rust-2018-idioms = "warn"
 build = "0.0.2"
 bytes = "1.8.0"
 futures = "0.3.31"
+tokio = { version = "1.41.1", features = ["full"] }
+fastrace = "0.7.4"
 raknet-rs = "0.1.4"
-tokio = "1.41.1"
+
+#[dev-dependencies]
+#tokio = { version = "1.41.1", features = ["full"] }
