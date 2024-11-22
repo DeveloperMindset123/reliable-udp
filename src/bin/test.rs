@@ -1,5 +1,10 @@
 use std::net::UdpSocket;
 // this essentially sets up port 4000 to be the listener
+// @see https://www.youtube.com/watch?v=sw3IsrKYmzk
+
+/// if we want to send a request from the client side
+/// echo -n 'custom string message' 127.0.0.1 4000
+
 fn main() {
     // UDP communication using RUST
     // exposes port 4000
@@ -21,13 +26,9 @@ fn main() {
 
         // determines what the server side message should be
         let response = "Hello from server...!";
-        
+
         // specifies the socket to send the response to the client side
         // converts the message into bytes and sends it back to the source, which is the client
         socket.send_to(response.as_bytes(), source).unwrap();
     }
 }
-
-
-/// if we want to send a request from the client side
-/// echo -n 'custom string message' 127.0.0.1 4000 

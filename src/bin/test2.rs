@@ -187,3 +187,58 @@
 //         println!();
 //     }
 // }
+use mio::net::UdpSocket;
+use std::any::type_name;
+use std::net::SocketAddr;
+
+// TODO : Read the cargo handbook to get some more insights
+// on how to read crates.io docs
+// https://doc.rust-lang.org/book/ch02-00-guessing-game-tutorial.html
+// @see https://www.youtube.com/watch?v=5LdnfzFdWhE --> understanding difference between packages, crates, mod for internal, use for external,
+// @see https://www.youtube.com/watch?v=gi0AQ78diSA&t=224s --> to better understand how struct works
+// @see https://docs.rs/mio/latest/mio/net/struct.UdpSocket.html --> this documentation explains how to construct a peer address for rust
+
+fn main() -> Result() {
+    // if you want to know if it was successful you can either use ? to propagate the error to the caller (if your function didn't return, the call succeeded), or use a match to explicitly handle both the success and error cases --> from discord server.
+    let mut sender_socket = UdpSocket::bind("127.0.0.1:0".parse()?)?;
+    let mut echoer_socket = UdpSocket::bind("127.0.0.1:0".parse()?)?;
+
+    // Our socket was created, but we should not use it before checking it's readiness.
+    // ensure that the format has {:?} as part of the string formatting
+    // understanding the purpose of {} vs {:?}
+    // unlike the standard {} format specifier, which might only print a basic representation of a value, {:?} will display the full type infomration along with the data
+    // making it easier to understand complex data structures --> meaning for more complex style of data, use {:?} instead.
+
+    // socket_type simply stores the type of the function
+    let socket_type = type_of(sender_socket); // returns : mio::net::udp::UdpSocket
+                                              // specifies the server to connect to?
+                                              // NOTE : it's better convention to use ? instead of .unwrap()
+
+    // if we do not use connect here, Sender and Echoer would need to call send_to and recv_from, respectively
+    //let mut endpoint = rudp::Endpoint::new(sock);
+
+    // we need a poll to check if SENDER is ready to be written into, and if ECHOER is ready to be read from
+}
+
+/// pass by reference
+/// when you pass parameters by reference
+/// unlike value parameters, a new storage location is not created for these parameters
+/// the reference parameters represent the same memory location as the actual parameters that are supplied to the method.
+/// parameter values can be passed by reference by prefixing the variable name with an &
+/// parameters can be immutable, since they generally remain unchanged once passed in once.
+/// @see https://stackoverflow.com/questions/28255861/convert-string-to-socketaddr --> function explaining how the conversion logic works
+fn convertToSocketAddr(server_string: &str) -> std::net::SocketAddr {
+    let server_details = server_string;
+    let server_parsed: SocketAddr = server_details
+        .parse()
+        .expect("Unable to parse socket address");
+    //println!("{:?}", server_parsed);
+    return server_parsed;
+}
+
+/// @see https://users.rust-lang.org/t/how-check-type-of-variable/33845
+/// T serves as a generic placeholder for any type
+/// alternative : type_name_of_val exists and does the same thing
+fn type_of<T>(_: T) -> &'static str {
+    type_name::<T>()
+}
