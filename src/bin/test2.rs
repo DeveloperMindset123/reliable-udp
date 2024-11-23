@@ -1,208 +1,52 @@
-// // we can directly import tokio::main using use tokio::main to use for testing purposes
-
-// /// @see https://doc.rust-lang.org/std/net/struct.UdpSocket.html --> see how this can be simplified.
-// #![allow(clippy::print_stdout)]
-// use std::collections::HashMap;
-// use std::error::Error;
-// use std::net::SocketAddr;
-// use std::process::exit;
-// use std::time::Duration;
-// use bytes::Bytes;
-// use fastrace::collector::{SpanContext, SpanId, SpanRecord, TraceId};
-// use fastrace::Span;
-// use futures::{SinkExt, StreamExt};
-// use raknet_rs::client::{self, ConnectTo};
-// use raknet_rs::opts::TraceInfo;
-// use raknet_rs::server::{self, MakeIncoming};
-// use raknet_rs::{Message, Reliability};
-// use tokio::net::UdpSocket;   // only tokio based import being made explicitly
-
-// #[tokio::main]
-// async fn main() -> Result<(), Box<dyn Error>> {
-//     let (reporter, spans) = fastrace::collector::TestReporter::new();
-//     fastrace::set_reporter(
-//         reporter,
-//         fastrace::collector::Config::default().report_before_root_finish(true),
-//     );
-
-//     let socket = UdpSocket::bind("127.0.0.1:0").await?;
-//     let local_addr = socket.local_addr()?;
-//     let mut incoming = socket.make_incoming(
-//         server::Config::new()
-//             .send_buf_cap(1024)
-//             .sever_guid(114514)
-//             // this is causing error
-//             .advertisement("Hello, I am proxy server")
-//             .min_mtu(500)
-//             .max_mtu(1400)
-//             .support_version(vec![9, 11, 13])
-//             .max_pending(64),
-//     );
-
-//     tokio::spawn(async move {
-//         loop {
-//             let (reader, writer) = incoming.next().await.unwrap();
-//             tokio::spawn(async move {
-//                 tokio::pin!(reader);
-//                 tokio::pin!(writer);
-//                 loop {
-//                     if let Some(data) = reader.next().await {
-//                         let trace_id = reader.last_trace_id().unwrap_or_else(|| {
-//                             println!("Please run with `--features fastrace/enable` and try again");
-//                             exit(0)
-//                         });
-//                         let root_span = Span::root(
-//                             "user root span",
-//                             SpanContext::new(trace_id, SpanId::default()),
-//                         );
-//                         // do something with data
-//                         tokio::time::sleep(Duration::from_millis(10)).await;
-//                         let _span = Span::enter_with_parent("user child span", &root_span);
-//                         writer
-//                             .send(Message::new(Reliability::ReliableOrdered, 0, data))
-//                             .await
-//                             .unwrap();
-//                         continue;
-//                     }
-//                     break;
-//                 }
-//             });
-//         }
-//     });
-
-//     client(local_addr).await?;
-
-//     fastrace::flush();
-//     display(spans.lock().clone());
-//     Ok(())
-// }
-
-// async fn client(addr: SocketAddr) -> Result<(), Box<dyn Error>> {
-//     let socket = UdpSocket::bind("0.0.0.0:0").await?;
-//     let (src, dst) = socket
-//         .connect_to(
-//             addr,
-//             client::Config::new()
-//                 .send_buf_cap(1024)
-//                 .mtu(1000)
-//                 .client_guid(1919810)
-//                 .protocol_version(11),
-//         )
-//         .await?;
-//     tokio::pin!(src);
-//     tokio::pin!(dst);
-//     dst.send(Message::new(
-//         Reliability::ReliableOrdered,
-//         0,
-//         Bytes::from_static(b"User pack1"),
-//     ))
-//     .await?;
-//     dst.send(Message::new(
-//         Reliability::ReliableOrdered,
-//         0,
-//         Bytes::from_static(b"User pack2"),
-//     ))
-//     .await?;
-//     let pack1 = src.next().await.unwrap();
-//     let pack2 = src.next().await.unwrap();
-//     assert_eq!(pack1, Bytes::from_static(b"User pack1"));
-//     assert_eq!(pack2, Bytes::from_static(b"User pack2"));
-//     Ok(())
-// }
-
-// fn display(spans: Vec<SpanRecord>) {
-//     let spans_map: HashMap<SpanId, SpanRecord> = spans
-//         .iter()
-//         .map(|span| (span.span_id, span.clone()))
-//         .collect();
-//     let adjacency_lists: HashMap<TraceId, HashMap<SpanId, Vec<SpanId>>> = spans.iter().fold(
-//         std::collections::HashMap::new(),
-//         |mut map,
-//          SpanRecord {
-//              trace_id,
-//              span_id,
-//              parent_id,
-//              ..
-//          }| {
-//             map.entry(*trace_id)
-//                 .or_default()
-//                 .entry(*parent_id)
-//                 .or_default()
-//                 .push(*span_id);
-//             map
-//         },
-//     );
-//     fn dfs(
-//         adjacency_list: &HashMap<SpanId, Vec<SpanId>>,
-//         spans: &HashMap<SpanId, SpanRecord>,
-//         span_id: SpanId,
-//         depth: usize,
-//         last: bool,
-//     ) {
-//         let span = &spans[&span_id];
-//         let mut properties = String::new();
-//         for (key, value) in &span.properties {
-//             properties.push_str(&format!("{}: {}, ", key, value));
-//         }
-//         let mut events = String::new();
-//         for ev in &span.events {
-//             events.push_str(&format!("'{}'", ev.name));
-//         }
-//         let prefix = if depth == 0 {
-//             String::new()
-//         } else if last {
-//             "╰".to_owned() + &"─".repeat(depth) + " "
-//         } else {
-//             "├".to_owned() + &"─".repeat(depth) + " "
-//         };
-//         println!(
-//             "{}{}({}{{{}}}) [{}us]",
-//             prefix,
-//             span.name,
-//             properties,
-//             events,
-//             span.duration_ns as f64 / 1_000.0,
-//         );
-//         if let Some(children) = adjacency_list.get(&span_id) {
-//             for (i, child) in children.iter().enumerate() {
-//                 dfs(
-//                     adjacency_list,
-//                     spans,
-//                     *child,
-//                     depth + 1,
-//                     i == children.len() - 1 && last,
-//                 );
-//             }
-//         }
-//     }
-//     for (trace_id, list) in adjacency_lists {
-//         if list.is_empty() {
-//             continue;
-//         }
-//         println!("trace_id: {}", trace_id.0);
-//         let l = &list[&SpanId::default()];
-//         for (i, root) in l.iter().enumerate() {
-//             dfs(&list, &spans_map, *root, 0, i == l.len() - 1);
-//         }
-//         println!();
-//     }
-// }
+#![allow(unused_doc_comments)] // allow doc comments
+#![allow(unused_imports)] // disable unused import warning
+#![allow(unused_variables)] // disable unused variable warning
+#![allow(unused_mut)] // disable unused mutable variable warning
 use mio::net::UdpSocket;
+use rudp::Endpoint;
 use std::any::type_name;
 use std::net::SocketAddr;
+use std::result::Result;
 
-// TODO : Read the cargo handbook to get some more insights
-// on how to read crates.io docs
 // https://doc.rust-lang.org/book/ch02-00-guessing-game-tutorial.html
-// @see https://www.youtube.com/watch?v=5LdnfzFdWhE --> understanding difference between packages, crates, mod for internal, use for external,
-// @see https://www.youtube.com/watch?v=gi0AQ78diSA&t=224s --> to better understand how struct works
+/// @see https://www.youtube.com/watch?v=5LdnfzFdWhE --> understanding difference between packages, crates, mod for internal, use for external,
+/// @see https://www.youtube.com/watch?v=gi0AQ78diSA&t=224s --> to better understand how struct works
+///
 // @see https://docs.rs/mio/latest/mio/net/struct.UdpSocket.html --> this documentation explains how to construct a peer address for rust
 
-fn main() -> Result() {
+/// understanding the purpose of dyn --> dyn is short for "dynamic" and refers to the fact that the trait objects perform dynamic dispatch.
+///
+/// Result<()> does not represent a void function in Rust
+///
+/// while () by itself can be considered a "unit" type representing the absence of a value (similar to void return)
+/// Result<()> actually indicates a function that can either return a successful result with no value (Ok(())) or an error (Err(E)) where E represents the error type
+///
+/// @see https://users.rust-lang.org/t/best-practices-for-unwrap/101335
+///
+/// "traits" work similar to interfaces in an abstract way
+/// allowing us to define the types for structs (think of structs as something that's built on top of traits, where custom types may be neccessary)
+/// think traits as means of initializing an interface
+/// struct works similar to actual typescript interfaces
+/// impl helps actually define the logic behind the implementation
+/// @see https://www.youtube.com/watch?v=6fwDwJodJrg&t=56s --> to better understand the difference between Traits vs Trait Bounds and Lifetime annotations
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // if you want to know if it was successful you can either use ? to propagate the error to the caller (if your function didn't return, the call succeeded), or use a match to explicitly handle both the success and error cases --> from discord server.
-    let mut sender_socket = UdpSocket::bind("127.0.0.1:0".parse()?)?;
-    let mut echoer_socket = UdpSocket::bind("127.0.0.1:0".parse()?)?;
 
+    // TODO : see if you can implement them using ? instead of .unwrap(), as means of propagating errors
+    // let sender_socket_address = convert_to_socket_addr("127.0.0.1:4000");
+    //let echoer_socket_address = convert_to_socket_addr("127.0.0.1:3000");
+    //let mut sender_socket = UdpSocket::bind(&sender_socket_address).unwrap();
+    //let mut echoer_socket = UdpSocket::bind(&echoer_socket_address);
+    let mut sender_socket = UdpSocket::bind(&"127.0.0.1:4000".parse()?)?;
+
+    /// Not fully sure why this binding approach doesn't work
+    /// let mut echoer_socket = UdpSocket::bind(&"127.0.0.1:3000".parse()?)?; --> unused port
+    ///
+    /// instead, the port has been set manually for the client side
+    let echoer_socket_address = convert_to_socket_addr("127.0.0.1:3000");
+    sender_socket.connect(echoer_socket_address).unwrap();
+    /// causing error beyond this point regarding traits.
+    ///let mut endpoint = Endpoint::new("127.0.0.1:4000");
     // Our socket was created, but we should not use it before checking it's readiness.
     // ensure that the format has {:?} as part of the string formatting
     // understanding the purpose of {} vs {:?}
@@ -218,6 +62,7 @@ fn main() -> Result() {
     //let mut endpoint = rudp::Endpoint::new(sock);
 
     // we need a poll to check if SENDER is ready to be written into, and if ECHOER is ready to be read from
+    Ok(())
 }
 
 /// pass by reference
@@ -227,7 +72,7 @@ fn main() -> Result() {
 /// parameter values can be passed by reference by prefixing the variable name with an &
 /// parameters can be immutable, since they generally remain unchanged once passed in once.
 /// @see https://stackoverflow.com/questions/28255861/convert-string-to-socketaddr --> function explaining how the conversion logic works
-fn convertToSocketAddr(server_string: &str) -> std::net::SocketAddr {
+fn convert_to_socket_addr(server_string: &str) -> std::net::SocketAddr {
     let server_details = server_string;
     let server_parsed: SocketAddr = server_details
         .parse()

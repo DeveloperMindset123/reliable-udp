@@ -22,4 +22,7 @@ mio = "=0.6.23"
 serde = "=1.0.215"
 serde_derive = "=1.0.215"
 rudp = "=0.2.1"
+reqwest = "0.12.9"
+laminar = "0.5"
+rhai = "1.20.0"
 #[dev-dependencies]
