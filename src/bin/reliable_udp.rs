@@ -9,7 +9,10 @@ use std::net::SocketAddr; // import the SocketAddr type
 use std::ops::FnOnce;
 use std::thread;
 
-/// TODO : you should just make an enum that represents all functions that you can pass in --> for
+/// TODO : you should just make an enum that represents all
+///
+/// @see https://docs.rs/laminar/latest/laminar/ --> Laminar Docs
+/// functions that you can pass in --> for
 ///
 /// the "?" operator is used to concisely handle potential errors
 /// within a function by early returning if an Option or Result value contains an Err or None variant (In this case, the function's return type is Result<(), Box<dyn Error>>)
@@ -109,6 +112,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 ///
 /// construct acts as a wrapper
 /// TODO : Understand this completely
+/// @see https://doc.rust-lang.org/std/ops/trait.FnOnce.html
 fn construct(method: impl FnOnce() -> Packet) -> Packet {
     method()
 }
