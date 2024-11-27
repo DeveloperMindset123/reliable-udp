@@ -9,8 +9,6 @@ use std::net::SocketAddr; // import the SocketAddr type
 use std::ops::FnOnce;
 use std::thread;
 
-/// TODO : you should just make an enum that represents all
-///
 /// @see https://docs.rs/laminar/latest/laminar/ --> Laminar Docs
 /// functions that you can pass in --> for
 ///
