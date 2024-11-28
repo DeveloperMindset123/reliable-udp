@@ -1,34 +1,48 @@
-use std::net::UdpSocket;
-// this essentially sets up port 4000 to be the listener
-// @see https://www.youtube.com/watch?v=sw3IsrKYmzk
+// use laminar::{DeliveryGuarantee, Packet, Socket};
+// use std::any::type_name;
+// use std::net::SocketAddr;
+// use std::vec::Vec;
 
-/// if we want to send a request from the client side
-/// echo -n 'custom string message' 127.0.0.1 4000
+// // borrow and initialize
+// const SERVER_ADDR: &str = "127.0.0.1:4000";
+// const CLIENT_ADDR: &str = "127.0.0.1:3000";
 
-fn main() {
-    // UDP communication using RUST
-    // exposes port 4000
-    let socket = UdpSocket::bind("0.0.0.0:4000").unwrap();
+// fn socket_address(address_val: &str) -> SocketAddr {
+//     return address_val.parse().unwrap();
+// }
 
-    // will print out what port the server is listening to
-    println!("Server listening on {}", socket.local_addr().unwrap());
+// // define the method as a closure
+// fn construct_new_packet(rawData: &str, method: impl FnOnce(some_destination : SocketAddr, byte_data : Vec<u8>) -> Packet) -> Packet {
+//     let destination : SocketAddr = socket_address(SERVER_ADDR);
+//     let payload = rawData.as_bytes();  // datatype : &[u8]
+//     //let mut payload_owned = payload.to_owned();
 
-    // specifies the buffer size
-    let mut buffer = [0; 1024];
-    loop {
-        // the open socket recieves the data
-        let (size, source) = socket.recv_from(&mut buffer).unwrap();
-        // the sent request is converted from bytes to String to be printed out on the terminal
-        let request = String::from_utf8_lossy(&buffer[..size]);
+//     println!("{}", type_of(payload));
+//     // NOTE : the idea here is the following
+//     // since method is a closure
+//     // we will pass in the path as the following
+//     // Packet::unreliable(destination, payload.to_owned())
+//     let packet: Packet = method(socket_address(SERVER_ADDR), payload.to_owned());
 
-        // if the request is sent successfully, will print out the request as well as the soource
-        println!("Recieved {} from {}", request, source);
+//     return packet;
+// }
 
-        // determines what the server side message should be
-        let response = "Hello from server...!";
+// // custom function to define the type
+// fn type_of<T>(_: T) -> &'static str {
+//     type_name::<T>()
+// }
 
-        // specifies the socket to send the response to the client side
-        // converts the message into bytes and sends it back to the source, which is the client
-        socket.send_to(response.as_bytes(), source).unwrap();
-    }
-}
+// // specify the data structure
+// // this data structure should not have any values
+// // not yet defined
+// struct custom_packet {
+//     destination: SocketAddr,
+
+// }
+
+// // define the different methods that are available
+// // impl custom_packet {}
+// fn main() {
+//     let mut my_packet = construct_new_packet("Some Raw Data", Packet::unreliable);
+//     println!("Packet is : {}", my_packet);
+// }

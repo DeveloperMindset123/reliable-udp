@@ -93,8 +93,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Creates packets with different reliabillities
     // our destination in this case is the server_socket
     // we will be sending the packet from the client side
-    let unreliable = Packet::unreliable(socket_address(SERVER_ADDR), bytes);
-    let reliable_unordered = Packet::reliable_unordered(server_socket, bytes);
+
+    // TODO : FIX THIS
+    //let unreliable = Packet::unreliable(socket_address(SERVER_ADDR), bytes);
+    //let reliable_unordered = Packet::reliable_unordered(server_socket, bytes);
 
     // species on which stream and how to order our packets
     // species
