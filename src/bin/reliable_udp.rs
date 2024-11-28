@@ -7,6 +7,7 @@ use laminar::{DeliveryGuarantee, Packet, Socket, SocketEvent};
 use std::any::type_name;
 use std::any::Any;
 use std::net::SocketAddr;
+use std::thread;
 use std::vec::Vec;
 //#![allow(unused_mut)]
 
@@ -106,10 +107,19 @@ fn send_data() {
     // thus we use .unwrap()
     let mut socket = Socket::bind(socket_address(CLIENT_ADDR)).unwrap();
     let mut packet_object = customPacket::new(socket_address(SERVER_ADDR), "ping".as_bytes(), 1);
-    let mut reliable_sequenced = packet_object.construct_reliable_sequenced_udp();
+    //let mut reliable_sequenced = packet_object.construct_reliable_sequenced_udp();
+    let packet_sender = socket.get_packet_sender();
 
-    // send the packet data
-    socket.send(reliable_sequenced);
+    // start the socket
+    // this will start a pill mechanism to recieve and send message
+    let _thread = thread::spawn(move || socket.start_polling());
+    let random_string = "some_string".as_bytes();
+    let mut reliable_sequenced = Packet::reliable_sequenced(
+        socket_address(SERVER_ADDR),
+        random_string.to_owned(),
+        Some(2),
+    );
+    return packet_sender.send(reliable_sequenced).unwrap();
 }
 
 /// define the logic for how data should be recieved
@@ -118,34 +128,37 @@ fn recieve_data() {
     // similar to how we binded to the client address
     let mut socket = Socket::bind(socket_address(SERVER_ADDR)).unwrap();
 
-    // we recieve the packet now
-    // we need to recieve the packet in small chunks
-    loop {
-        // recieve from the socket and wrap it around a container using Some
-        if let Some(result) = socket.recv() {
-            match result {
-                SocketEvent::Packet(packet) => {
-                    let endpint: SocketAddr = packet.addr();
-                    let recieved_data: &[u8] = packet.payload();
+    let event_receiver = socket.get_event_receiver();
+    // Starts the socket, which will start a poll mechanism to receive and send messages.
+    let _thread = thread::spawn(move || socket.start_polling());
 
-                    // deserialize the bytes
-                    // print out the information
-                    // this is basically the "reconstruction phase"
-                    // where the bytes are taken and reconstructed to render on the server's end
-                    // here we are printing out the endpoit and the length of data we are recieving
-                    println!(
-                        "Recieved packet from {:?} with length {:?}",
-                        endpint,
-                        recieved_data.len()
-                    );
-                }
-                _ => {}
+    // Waits until a socket event occurs
+    let result = event_receiver.recv();
+
+    match result {
+        Ok(socket_event) => match socket_event {
+            SocketEvent::Packet(packet) => {
+                let endpoint: SocketAddr = packet.addr();
+                let received_data: &[u8] = packet.payload();
             }
-            break;
+            SocketEvent::Connect(connect_event) => {
+                println!("client connected successfully");
+            }
+            SocketEvent::Timeout(timeout_event) => {
+                println!("client timed out");
+            }
+            SocketEvent::Disconnect(disconnect_event) => {
+                println!("client has been disconnected.");
+            }
+        },
+        Err(e) => {
+            println!("Something went wrong when receiving, error: {:?}", e);
         }
     }
 }
 
 fn main() {
-    send_data();
+    recieve_data();
 }
+
+// TODO : look into this --> https://github.com/TimonPost/laminar/blob/master/examples/simple_udp.rs
