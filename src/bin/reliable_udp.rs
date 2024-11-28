@@ -22,6 +22,7 @@ fn construct(method: impl FnOnce() -> Packet) -> Packet {
 }
 
 // NOTE : this function might be causing errors
+// most likely due to the semicolon, requires further testing
 fn socket_address(address_val: &str) -> SocketAddr {
     return address_val.parse().unwrap();
 }
@@ -171,6 +172,7 @@ fn type_of<T>(_: T) -> &'static str {
 // }
 
 fn main() {
+    // TODO : place this in a function wrapper
     let mut server = Socket::bind(server_address()).unwrap();
     let mut client = Socket::bind(client_address()).unwrap();
 
@@ -188,6 +190,19 @@ fn main() {
 
     // check the server for any new packet
     server.manual_poll(Instant::now());
+
+    // === result ===
+    while let Some(pkt) = server.recv() {
+        match pkt {
+            SocketEvent::Packet(pkt) => {
+                // used to print out JSON data format
+                println!["{:?}", deserialize::<PacketType>(pkt.payload()).unwrap()];
+                // reply with Pong!
+                println!("Pong!")
+            }
+            _ => {}
+        }
+    }
 }
 
 // TODO : look into this --> https://github.com/TimonPost/laminar/blob/master/examples/simple_udp.rs
