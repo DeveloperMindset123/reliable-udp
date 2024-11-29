@@ -23,18 +23,21 @@ fn construct(method: impl FnOnce() -> Packet) -> Packet {
 
 // NOTE : this function might be causing errors
 // most likely due to the semicolon, requires further testing
+// logically seems sound but compiler panics
 fn socket_address(address_val: &str) -> SocketAddr {
     return address_val.parse().unwrap();
 }
 
-// using the default function we have been provided
-fn server_address() -> SocketAddr {
-    SERVER_ADDR.parse().unwrap()
-}
+// using the default getters instead
+// old functions, no longer relevant
 
-fn client_address() -> SocketAddr {
-    CLIENT_ADDR.parse().unwrap()
-}
+// fn server_address() -> SocketAddr {
+//     SERVER_ADDR.parse().unwrap()
+// }
+
+// fn client_address() -> SocketAddr {
+//     CLIENT_ADDR.parse().unwrap()
+// }
 
 struct customPacket<'a> {
     destination: SocketAddr, // need to call on socket_addr() with the socket value passed in
@@ -113,94 +116,56 @@ fn type_of<T>(_: T) -> &'static str {
     type_name::<T>()
 }
 
-/// send data over UDP
-// fn send_data() {
-//     // bind the client socket
-//     // when SocketAddr is returned by invoking socket_address("IP:PORT")
-//     // we need to use .unwrap() to remove the container and get the content of the container
-//     // thus we use .unwrap()
-//     let mut socket = Socket::bind(socket_address(CLIENT_ADDR)).unwrap();
-//     let mut packet_object = customPacket::new(socket_address(SERVER_ADDR), "ping".as_bytes(), 1);
-//     //let mut reliable_sequenced = packet_object.construct_reliable_sequenced_udp();
-//     let packet_sender = socket.get_packet_sender();
-
-//     // start the socket
-//     // this will start a pill mechanism to recieve and send message
-//     let _thread = thread::spawn(move || socket.start_polling());
-//     let random_string = "some_string".as_bytes();
-//     let mut reliable_sequenced = Packet::reliable_sequenced(
-//         socket_address(SERVER_ADDR),
-//         random_string.to_owned(),
-//         Some(2),
-//     );
-//     return packet_sender.send(reliable_sequenced).unwrap();
-// }
-
-// /// define the logic for how data should be recieved
-// fn recieve_data() {
-//     // setup an UDP socket and bind it the server address
-//     // similar to how we binded to the client address
-//     let mut socket = Socket::bind(socket_address(SERVER_ADDR)).unwrap();
-
-//     let event_receiver = socket.get_event_receiver();
-//     // Starts the socket, which will start a poll mechanism to receive and send messages.
-//     let _thread = thread::spawn(move || socket.start_polling());
-
-//     // Waits until a socket event occurs
-//     let result = event_receiver.recv();
-
-//     match result {
-//         Ok(socket_event) => match socket_event {
-//             SocketEvent::Packet(packet) => {
-//                 let endpoint: SocketAddr = packet.addr();
-//                 let received_data: &[u8] = packet.payload();
-//             }
-//             SocketEvent::Connect(connect_event) => {
-//                 println!("client connected successfully");
-//             }
-//             SocketEvent::Timeout(timeout_event) => {
-//                 println!("client timed out");
-//             }
-//             SocketEvent::Disconnect(disconnect_event) => {
-//                 println!("client has been disconnected.");
-//             }
-//         },
-//         Err(e) => {
-//             println!("Something went wrong when receiving, error: {:?}", e);
-//         }
-//     }
-// }
-
 fn main() {
-    // TODO : place this in a function wrapper
-    let mut server = Socket::bind(server_address()).unwrap();
-    let mut client = Socket::bind(client_address()).unwrap();
+    // uncomment them after testing if the other function doesn't work
+    // let mut server = Socket::bind(server_address()).unwrap();
+    // let mut client = Socket::bind(client_address()).unwrap();
 
-    client.send(Packet::unreliable(
-        socket_address(SERVER_ADDR),
-        serialize(&PacketType::PacketContent {
-            // borrow data
-            payload: String::from("Ping!"),
-        })
-        .unwrap(),
-    ));
+    let mut server = Socket::bind(socket_address(SERVER_ADDR)).unwrap();
 
-    // send the queued data operation
-    client.manual_poll(Instant::now());
+    let mut client = Socket::bind(socket_address(CLIENT_ADDR)).unwrap();
 
-    // check the server for any new packet
-    server.manual_poll(Instant::now());
+    for i in 1..11 {
+        client.send(Packet::reliable_ordered(
+            socket_address(SERVER_ADDR),
+            // TODO : wrap this around a sequence number
+            // serialize formats the data so that it can be sent over the network in the form of bytes
+            // essentially, the raw string data is broken down into bytes
+            // 3 things happening here
+            // Packet::reliable_sequenced takes in three things
+            // param 1 : socket address for the server --> since client is the one sending the data
+            // second is the data in bytes, where we take the raw string data and convert it to bytes
+            serialize(&PacketType::PacketContent {
+                // borrow data
+                // send data
+                // we also want to print out the value of the current sequence number
+                payload: String::from(format!("Ping!")),
+            })
+            .unwrap(),
+            // sequence number based on the current value of the loop
+            Some(i),
+        ));
 
-    // === result ===
-    while let Some(pkt) = server.recv() {
-        match pkt {
-            SocketEvent::Packet(pkt) => {
-                // used to print out JSON data format
-                println!["{:?}", deserialize::<PacketType>(pkt.payload()).unwrap()];
-                // reply with Pong!
-                println!("Pong!")
+        // send the queued data operation
+        client.manual_poll(Instant::now());
+
+        // check the server for any new packet
+        server.manual_poll(Instant::now());
+
+        // === result ===
+        // we need to take the bytes in increments
+        // in the event that entire packet can be sent through directly
+        while let Some(pkt) = server.recv() {
+            match pkt {
+                SocketEvent::Packet(pkt) => {
+                    // used to print out JSON data format
+                    // this will print out the content of the payload in a JSON format
+                    println!["{:?}", deserialize::<PacketType>(pkt.payload()).unwrap()];
+                    // reply with Pong!
+                    println!("Pong! {:?}", i);
+                }
+                _ => {}
             }
-            _ => {}
         }
     }
 }
@@ -210,5 +175,5 @@ fn main() {
 #[derive(Debug, Serialize, Deserialize)]
 enum PacketType {
     PacketContent { payload: String },
-    PacketHeader { sequenceNumber: u32 },
+    PacketHeader { sequence_number: u32 },
 }
