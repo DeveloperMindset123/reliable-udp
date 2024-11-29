@@ -1,3 +1,4 @@
+<img src="demo-udp.png" />
 <h1>Reliable User Datagram Protocol (UDP)</h1>
 <p>A simple rust based project that will send variable number of requests from the client side to the server side. The request that is being sent in this case, for the purpose of simplicity is a simple "ping" message, and the server upon recieving the message will respond with "pong", alongside the current sequence number as well as the round trip time. Round trip time is used to calculate the time it takes for a client to send a request and to recieve a response back. </p>
 
@@ -51,5 +52,15 @@ Ensure that rust is installed on your operating system if this is your first tim
    git remote set-url origin github_username/repo_name
    git remote -v # confirm the changes
    ```
+7. Run the appropriate file
+  ```sh
+  cargo run --bin final_reliable_udp
+  ```
+
+#### NOTE : While in the demo I am adding RUSTFLAGS, that's to target different compilers, since the backend for Cargo is gcc/clang compilers, so it is an optional flag I add during compilation since my original linker is corrupt. Hence I use custom compiler path.
+
+If you would like to learn more about this, refer to the following post I made on stack overflow on my process of debugging this issue [Relevant Stack Overflow Link](https://stackoverflow.com/questions/79152287/cargo-build-error-error-linking-with-cc-failed-exit-status-1-on-macbook-a/79155123?noredirect=1#comment139596227_79155123)
+
+This might be helpful if you run into compilation errors and happen to be using Mac OS X.
 
 ### Demo
