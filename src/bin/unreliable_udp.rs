@@ -1,3 +1,5 @@
+/// simple unrealiblae UDP server to send message to server via terminal
+/// preliminary implementation to understand how UDP works at a basic level in Rust
 use std::net::UdpSocket;
 // this essentially sets up port 4000 to be the listener
 // @see https://www.youtube.com/watch?v=sw3IsrKYmzk

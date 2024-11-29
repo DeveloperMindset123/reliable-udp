@@ -1,3 +1,6 @@
+/// documentation file
+///
+/// sample examples + comments to be used for future reference
 /// this is solely for understanding how Some() works
 /// @see https://users.rust-lang.org/t/hi-i-am-new-to-rust-and-have-a-simple-question-about-some/2684/8
 fn main() {

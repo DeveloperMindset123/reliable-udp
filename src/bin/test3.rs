@@ -1,3 +1,5 @@
+/// iteration 3, attempted to use raknet-rs to see if I can make the socket functional
+/// not functional, but learned how to execute asynchronous function using [tokio::main]
 #![allow(clippy::print_stdout)]
 
 /// this works somewhat

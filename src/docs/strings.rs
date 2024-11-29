@@ -1,5 +1,7 @@
 use std::any::type_name;
-
+/// documentation
+/// 
+/// refer to the comments + sample code below:
 /// this file is used to understand the difference between &str and String
 /// in rust, there's no such thing as str in rust
 /// when it comes to strings in rust, there's two types : &str and String
