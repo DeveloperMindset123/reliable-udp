@@ -1,6 +1,7 @@
 //! Note that the terms "client" and "server" here are purely what we logically associate with them.
 //! Technically, they both work the same.
 // library to recieve user input
+// TODO : add more comments explaining the purpose of each
 #![allow(unused_mut)]
 #![allow(unused_variables)]
 #![allow(unreachable_code)]
