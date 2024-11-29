@@ -1,20 +1,28 @@
-//mod client;
-use tokio::net::UdpSocket;
-use std::io;
+/// main file, not used
+// use std::net::UdpSocket;
 
-/// https://docs.rs/tokio/latest/tokio/net/struct.UdpSocket.html
-/// https://github.com/MemoriesOfTime/raknet-rs/blob/main/examples/tracing.rs --> see this file for example uses, some of the functions has already been defined.
-async fn test() -> io::Result<()> {
-   let socket = UdpSocket::bind("0.0.0:8080").await?;
-   let mut buf = [0; 1024];
-   loop {
-    let (len, addr) = socket.recv_from(&mut buf).await?;
-    println!("{:?} bytes recieved from {:?}", len, addr);
-    let len = socket.send_to(&buf[..len], addr).await?;
-    println!("{:?} bytes sent", len);
-   }
-}
+// fn main() -> std::io::Result<()> {
+//     {
+//         let socket = UdpSocket::bind("127.0.0.1:34254");
 
+//         // recieves a single datafram message on socket.
+//         // if 'buf' is too small to hold
+//         // the message, it will be cut off.
+//         // after creating a UdpSocket by binding it to a socket address, data can be sent to and recieved from any other socket address
+//         let mut buf = [0; 10];
+//         let (amt, src) = socket.recv_from(&mut buf)?;
+
+//         // redeclare 'buf' as slice of the recieved data and reverse data back to origin.
+//         let buf = &mut buf[..amt];
+//         buf.reverse();
+//         socket.send_to(buf, &src)?;
+//         println!("End of execution")
+//     }
+//     // close the socket
+//     Ok(())
+// }
+
+/// there will be runtime errors if we don't include the main function.
 fn main() {
-    //test();
+    println!("This is the main function from the main file...");
 }
