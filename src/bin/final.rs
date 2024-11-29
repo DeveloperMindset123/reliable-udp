@@ -1,7 +1,6 @@
 //! Note that the terms "client" and "server" here are purely what we logically associate with them.
 //! Technically, they both work the same.
 // library to recieve user input
-// TODO : add more comments explaining the purpose of each
 #![allow(unused_mut)]
 #![allow(unused_variables)]
 #![allow(unreachable_code)]
@@ -57,7 +56,7 @@ fn server() -> Result<(), ErrorKind> {
      *
      * socket.get_packet_sender() --> Returns a handle to the packet sender which provides a thread-safe way to enqueue packets to be processed. This could be used when the socket is busy running it's polling loop in a seperate thread
      *
-     * socket.get_event_reciever() --> returns a handle to the event reciever
+     * socket.get_event_reciever() --> returns a handle to the event reciever which provides a thread-safe-way to retrieve events from the socket. The use case is similar to get_packet_sender() method.
      */
     let mut socket = Socket::bind(SERVER)?;
     let (sender, receiver) = (socket.get_packet_sender(), socket.get_event_receiver());
@@ -79,9 +78,11 @@ fn server() -> Result<(), ErrorKind> {
     loop {
         // equivalent to using try/catch in javascript
         // logic defining what the server should do upon successfully recieving the packets
+        // the message displayed here is what we see on the server side as a response
         if let Ok(event) = receiver.recv() {
             match event {
                 SocketEvent::Packet(packet) => {
+                    // the payload contains the message of the packet
                     let msg = packet.payload();
 
                     // no response will be sent if user inputs Bye!
@@ -94,7 +95,7 @@ fn server() -> Result<(), ErrorKind> {
                     // with valid UTF-8 characters
                     let msg = String::from_utf8_lossy(msg);
 
-                    // extracts the ip
+                    // extracts the ip from the packet
                     let ip = packet.addr().ip();
 
                     println!("Received message {:?} from {:?}", msg, ip);
@@ -111,6 +112,8 @@ fn server() -> Result<(), ErrorKind> {
                         ))
                         .expect("This should send"); // error handler in the event packets aren't send
                 }
+                // temporary socket timeout before connection is re-established
+                // occurs if the thread idles for too long
                 SocketEvent::Timeout(address) => {
                     println!("Client timed out: {}", address);
                 }
@@ -129,7 +132,7 @@ fn client(number_of_requests: u8) -> Result<(), ErrorKind> {
     // @127.0.0.1 : is a special ip address known as "the loopback address"
     // it is used by the computer to refer to itself
     // @:* represents the port number, this can be any available port within the operating system
-    let addr = "127.0.0.1:12352";
+    let addr = "127.0.0.1:4000";
     let mut socket = Socket::bind(addr)?;
     println!("Connected on {}", addr);
     let mut seq = 1;
@@ -154,6 +157,7 @@ fn client(number_of_requests: u8) -> Result<(), ErrorKind> {
         // after sending the specified number of requests here back to back
         // the server will be sending waiting for acknowledgement for
         for i in 1..number_of_requests + 1 {
+            // start the timer at the beggining of each iteration
             let now = Instant::now();
             let string = i.to_string();
             //line.push_str(&string);
@@ -161,12 +165,17 @@ fn client(number_of_requests: u8) -> Result<(), ErrorKind> {
             // send reliable sequence data
             socket.send(Packet::reliable_sequenced(
                 server,
+                // creates a copy of the string, as the name implies
+                // converts it into bytes
+                // so that it can be sent over the network to the server port
                 line.clone().into_bytes(),
                 Some(i),
             ))?;
 
             socket.manual_poll(Instant::now());
 
+            // if user inputs Bye!
+            // no message gets sent
             if line == "Bye!" {
                 break;
             }
@@ -183,6 +192,7 @@ fn client(number_of_requests: u8) -> Result<(), ErrorKind> {
                             "{}, {} RTT {:?}",
                             String::from_utf8_lossy(packet.payload()),
                             i,
+                            // check the timestamp it took to send the message
                             now.elapsed()
                         );
                     } else {
@@ -191,29 +201,45 @@ fn client(number_of_requests: u8) -> Result<(), ErrorKind> {
                         println!("Unknown sender.");
                     }
                 }
-                Some(SocketEvent::Timeout(_)) => {}
+
+                // specify what to do if the client times out, there could be instance message has been sent but the connection may have been lost after establishment
+                // if so, cnnection will be re-established and message will be sent
+                // ensuring that the server sends the appropriate response back
+                // the connection will timeout if the thread remains idle for too long
+                // the disconnect method from the library isn't entirely functional
+                Some(SocketEvent::Disconnect(_)) => {}
                 _ => println!("Pong! {:?}, RTT : {:?}", i, now.elapsed()),
             }
         }
     }
 
+    // this must be returned at the end of the function execution
+    // otherwise the compiler will panic
     Ok(())
 }
 
 fn main() -> Result<(), ErrorKind> {
     // used to take in user input
+    // store the user input within the variable stdin
+    // immutable by default
     let stdin = stdin();
 
+    // prompt the user to type in whether they want to start client or server
     println!("Please type in `server` or `client`.");
 
     let mut s = String::new();
     stdin.read_line(&mut s)?;
 
+    // basic conditional statement to check if we should start server or client
+    // we only have to check the first letter of the user input
+    // if it doesn't start with an s
+    // start the client instance instead
     if s.starts_with('s') {
-        println!("Starting server..");
+        println!("Starting server at port 3000...");
         server()
     } else {
-        println!("Starting client..");
-        client(30)
+        println!("Starting client at port 4000...");
+        // the value sepcified within client is used to determine how many requests should be sent back-to-back
+        client(10)
     }
 }
